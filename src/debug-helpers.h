@@ -13,9 +13,9 @@
 // These are just some macros I put in to trace certain lifecycle and value moments to stdout
 #include <iostream>
 #define _DBGCOUT                                                                                   \
-    std::cout << "[clap-saw-demo] " << __FILE__ << ":" << __LINE__ << " (" << __func__ << ") : "
+    std::cout << "[clap-saw-demo-imgui] " << __FILE__ << ":" << __LINE__ << " (" << __func__ << ") : "
 #define _DBGMARK                                                                                   \
-    std::cout << "[clap-saw-demo] " << __FILE__ << ":" << __LINE__ << " (" << __func__ << ")"      \
+    std::cout << "[clap-saw-demo-imgui] " << __FILE__ << ":" << __LINE__ << " (" << __func__ << ")"      \
               << std::endl;
 #define _D(x) " [" << #x << "=" << x << "] "
 
