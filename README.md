@@ -1,61 +1,34 @@
-# Clap Saw Demo Synth
+# Basic Idea
 
-The Clap Saw Demo Synth is a synth we put together in the week before the
-CLAP 1.0 Launch to show the developer community a few things we wanted to
-cover in our example base. It serves as an example in the following ways
+imgui is a 'direct more' rnederer. You get called to make your rectangles every
+so often. It has backends which do that.
 
-- It binds a VSTGUI UI to a CLAP plugin without using any frameworks
-- It shows polyphonic parameter modulation and note expression support
-- It sounds pretty good, with a Saw from the algorithm in Surge's Modern oscillator
-  and an SVF filter from cytomic
-- It is released under the MIT license
+So here's my idea for clap
 
-While some folks might actually want to use this as a synth, it really does serve
-as a pedagogical exercise more than anything else.
+Look at `libs/imgui-clap-support/include/imgui-clap-support/imgui-clap-editor.h`
 
-## Building the synth
+This is an abstract class which suppors a few methods (onCreate/Destry/Render). We
+would need to add resize later obviously. And holds a context.
 
-```shell
-git clone https://github.com/surge-synthesizer/clap-saw-demo
-cd clap-saw-demo
-git submodule update --init --recursive
-mkdir ignore
-cmake -Bignore/build -DCMAKE_BUILD_TYPE=Release   # or DEBUG or whatever
-cmake --build ignore/build
-```
+There are a few free functions which set up the view.
 
-and you will get `ignore/build/clap-saw-demo.clap`
+This means all the *nasty* GLFW and so on code behind imggui can go away from the user
 
-## Understanding the code
+So the way I have this set up (since I only did mac tonigh) is `libs/imgui-clap-suport/src/apple-macos.mm`
+actually uses the *METAL* renderer to render the simple UI which is speciiced in
+`src/clap-saw-demo-editor.cpp` in `ClapSawDemoEditor::onRender`
 
-We tried to make an effort to have the code clean to read with reasonable comments.
-The best starting point is probably clap-saw-demo.h if you want to understand the
-modulation system or clap-saw-demo-editor.h if you want to understand the VSTGUI bindings.
+Right now it is pretty trivial - it just shows text - but making this work like
+vstgui is easy.
 
-There are still a few small things which aren't done. The issues list in this github repo
-is the book of work to get to a final state.
+The free fuynctions in `imggui-clap-editor.h` bind the editor object to the implementation.
+You can see in `clap-saw-demo-editor.cpp` we call them from the clap with isntances
+of the object in question
 
-## Sending a change, fix, or PR
+So what's the upshot of this? Well it means if we finis `imggui-clap-support` (and finish
+means: add a linux gl and windows gl or dx backend implementation to match the metal one,
+move it to a submodule, add resize check for leaks and bugs, etc...) then a person writing a clap
+could simply implement the small boilerplate to connect their editor object
+up to the clap gui and voila.
 
-This is an open contribution project! We welcome changes and contributions. If you find a small bug
-or modify the cmake file to work on a new OS or fix a comment please just send in a PR.
-
-If you want to do something more, we also welcome that! Probably best to open a github issue to chat first
-and also, wouldn't you rather work on surge or shortcircuit? Also please keep a few things in mind
-
-1. This is designed to be a CLAP example, so porting it to AudioUnit or whatever would not be productive. If you
-   love the algo and sound, just lift the voice class into a new synth
-2. This is designed to be a CLAP example, so adding a hundred new features which would make it an awesome synth
-   seems like it would be confusing. Also, if you want hundreds of features, you can download Surge for free from
-   this very github project!
-3. The UI is not very pleasant. I wrote minimal VSTGUI as an example but it could look better. If you want
-   to do this and code it up, go for it!
-
-## A note to Linux users
-
-CLAP works great on linux! We have done loads of our primary CLAP development there.
-But VSTGUI on linux is a bit trickier.
-
-Anyway I think I finally got it working, but I need to write documentation and check it again.
-As of this commit, on Linux it works in BWS43b6 with multiple plugisn in process starting and stopping
-UIs and it doesn't leak timers or FDs. But some work to do on documenting and reviewing it.
+Will share more tomorrow -late here now - but wanted to get this up.

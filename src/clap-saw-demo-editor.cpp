@@ -161,7 +161,6 @@ void ClapSawDemoEditor::onRender() {
     ImGui::Begin("Window 1");
     ImGui::Text( "Heya There" );
     ImGui::End();
-
 }
 
 } // namespace sst::clap_saw_demo
