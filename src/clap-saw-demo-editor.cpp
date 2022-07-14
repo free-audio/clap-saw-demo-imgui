@@ -5,6 +5,7 @@
 #include "clap-saw-demo-editor.h"
 #include "clap-saw-demo.h"
 
+#include "imgui.h"
 
 namespace sst::clap_saw_demo
 {
@@ -53,8 +54,11 @@ bool ClapSawDemo::guiIsApiSupported(const char *api, bool isFloating) noexcept
 bool ClapSawDemo::guiCreate(const char *api, bool isFloating) noexcept
 {
     _DBGMARK;
-
-    return false;
+    assert(!editor);
+    editor = new ClapSawDemoEditor();
+    const clap_host_timer_support_t *timer{nullptr};
+    _host.getExtension(timer, CLAP_EXT_TIMER_SUPPORT);
+    return imgui_clap_guiCreateWith(editor, timer);
 }
 
 /*
@@ -63,8 +67,11 @@ bool ClapSawDemo::guiCreate(const char *api, bool isFloating) noexcept
  */
 void ClapSawDemo::guiDestroy() noexcept
 {
-    if (editor)
-        delete editor;
+    assert(editor);
+    const clap_host_timer_support_t *timer{nullptr};
+    _host.getExtension(timer, CLAP_EXT_TIMER_SUPPORT);
+    imgui_clap_guiDestroyWith(editor, timer);
+    delete editor;
     editor = nullptr;
 }
 
@@ -81,6 +88,11 @@ void ClapSawDemo::guiDestroy() noexcept
  */
 bool ClapSawDemo::guiSetParent(const clap_window *window) noexcept
 {
+    assert(editor);
+    auto res = imgui_clap_guiSetParentWith(editor, window);
+    if (!res)
+        return false;
+
     if (dataCopyForUI.isProcessing)
     {
         // and ask the engine to refresh from the processing thread
@@ -99,7 +111,7 @@ bool ClapSawDemo::guiSetParent(const clap_window *window) noexcept
         }
     }
     // And we are done!
-    return false;
+    return true;
 }
 
 /*
@@ -124,7 +136,8 @@ bool ClapSawDemo::guiSetScale(double scale) noexcept
 bool ClapSawDemo::guiSetSize(uint32_t width, uint32_t height) noexcept
 {
     _DBGCOUT << _D(width) << _D(height) << std::endl;
-    return false;
+    assert(editor);
+    return imgui_clap_guiSetSizeWith(editor, width, height);
 }
 
 /*
@@ -133,7 +146,9 @@ bool ClapSawDemo::guiSetSize(uint32_t width, uint32_t height) noexcept
  */
 bool ClapSawDemo::guiGetSize(uint32_t *width, uint32_t *height) noexcept
 {
-    return false;
+    *width = 500;
+    *height = 800;
+    return true;
 }
 
 
@@ -142,5 +157,11 @@ bool ClapSawDemo::guiAdjustSize(uint32_t *width, uint32_t *height) noexcept
     return false;
 }
 
+void ClapSawDemoEditor::onRender() {
+    ImGui::Begin("Window 1");
+    ImGui::Text( "Heya There" );
+    ImGui::End();
+
+}
 
 } // namespace sst::clap_saw_demo
