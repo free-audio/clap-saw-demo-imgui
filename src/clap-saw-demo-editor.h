@@ -6,6 +6,7 @@
 #define CLAP_SAW_DEMO_EDITOR_H
 #include "clap-saw-demo.h"
 #include "imgui-clap-support/imgui-clap-editor.h"
+#include <unordered_map>
 
 namespace sst::clap_saw_demo
 {
@@ -20,6 +21,9 @@ struct ClapSawDemoEditor : public imgui_clap_editor
                       const ClapSawDemo::DataCopyForUI &, std::function<void()>);
 
     void onRender() override;
+
+    std::unordered_map<clap_id, double> paramCopy;
+    std::unordered_map<clap_id, bool> paramInEdit;
 };
 } // namespace sst::clap_saw_demo
 #endif

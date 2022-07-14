@@ -146,8 +146,8 @@ bool ClapSawDemo::guiSetSize(uint32_t width, uint32_t height) noexcept
  */
 bool ClapSawDemo::guiGetSize(uint32_t *width, uint32_t *height) noexcept
 {
-    *width = 500;
-    *height = 800;
+    *width = 700;
+    *height = 500;
     return true;
 }
 
@@ -170,42 +170,61 @@ void ClapSawDemoEditor::onRender() {
     {
         if (r.type == ClapSawDemo::ToUI::MType::PARAM_VALUE)
         {
-#if 0
-            auto q = paramIdToCControl.find(r.id);
-
-            if (q != paramIdToCControl.end())
-            {
-                auto cc = q->second;
-                auto val = r.value;
-
-                switch (r.id)
-                {
-                case ClapSawDemo::pmUnisonSpread:
-                    val = val / 100.0;
-                    break;
-                case ClapSawDemo::pmOscDetune:
-                    val = val / 200.0;
-                    break;
-                case ClapSawDemo::pmUnisonCount:
-                    val = val / SawDemoVoice::max_uni;
-                    break;
-                case ClapSawDemo::pmCutoff:
-                    val = (val - 1) / 126.0;
-                    break;
-
-                default:
-                    break;
-                }
-                cc->setValue(val);
-                cc->invalid();
-            }
-#endif
+            paramCopy[r.id] = r.value;
+            paramInEdit[r.id] = false;
         }
     }
 
     ImGui::Begin("Window 1");
-    ImGui::Text( "Heya There" );
+    ImGui::Text( "Heya There lets just use text to make this window big" );
     ImGui::Text( "Polyphony is %d", (int)synthData.polyphony);
+
+    auto makeSliderForParam = [this](auto pid, const char* label, float min, float max)
+    {
+        float co = paramCopy[pid];
+        auto wasInEdit = paramInEdit[pid];
+        if (ImGui::SliderFloat(label, &co, min, max))
+        {
+            if (!wasInEdit)
+            {
+                paramInEdit[pid] = true;
+                auto q = ClapSawDemo::FromUI();
+                q.id = pid;
+                q.type = ClapSawDemo::FromUI::MType::BEGIN_EDIT;
+                q.value = co;
+                outbound.try_enqueue(q);
+            }
+            if (co != paramCopy[pid])
+            {
+                auto q = ClapSawDemo::FromUI();
+                q.id = pid;
+                q.type = ClapSawDemo::FromUI::MType::ADJUST_VALUE;
+                q.value = co;
+                outbound.try_enqueue(q);
+                paramCopy[pid] = co;
+            }
+        }
+        else
+        {
+            if (wasInEdit)
+            {
+                paramInEdit[pid] = false;
+                auto q = ClapSawDemo::FromUI();
+                q.id = pid;
+                q.type = ClapSawDemo::FromUI::MType::END_EDIT;
+                q.value = co;
+                outbound.try_enqueue(q);
+            }
+        }
+    };
+
+    makeSliderForParam(ClapSawDemo::pmUnisonCount, "uni count", 1, SawDemoVoice::max_uni);
+    makeSliderForParam(ClapSawDemo::pmUnisonSpread, "uni spread", 0, 100);
+    makeSliderForParam(ClapSawDemo::pmOscDetune, "osc detune", -200, 200);
+
+    makeSliderForParam(ClapSawDemo::pmCutoff, "cutoff", 1, 127);
+    makeSliderForParam(ClapSawDemo::pmResonance, "resonance", 0, 1);
+
     ImGui::End();
 }
 
