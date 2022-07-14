@@ -154,7 +154,7 @@ bool ClapSawDemo::guiGetSize(uint32_t *width, uint32_t *height) noexcept
 
 bool ClapSawDemo::guiAdjustSize(uint32_t *width, uint32_t *height) noexcept
 {
-    return false;
+    return true;
 }
 
 void ClapSawDemoEditor::onRender() {

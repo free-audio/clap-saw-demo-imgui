@@ -20,6 +20,7 @@
 
 - (id)initWithEditor:(imgui_clap_editor *)ed  withFrame:(NSRect)r;
 - (void) startTimer;
+- (void) stopTimer;
 - (void) doIdle;
 @end
 
@@ -70,8 +71,14 @@ void timerCallback(CFRunLoopTimerRef timer, void *info)
 
     if (_idleTimer)
         CFRunLoopAddTimer(CFRunLoopGetMain(), _idleTimer, kCFRunLoopCommonModes);
+}
 
-
+- (void)stopTimer
+{
+    if (_idleTimer)
+    {
+        CFRunLoopRemoveTimer(CFRunLoopGetMain(), _idleTimer, kCFRunLoopCommonModes);
+    }
 }
 
 - (void)doIdle
@@ -108,7 +115,7 @@ void timerCallback(CFRunLoopTimerRef timer, void *info)
     ImGui::Render();
     ImDrawData* draw_data = ImGui::GetDrawData();
 
-    static ImVec4 clear_color = ImVec4(0.f, 0.f, 0.f, 1.00f);
+    static ImVec4 clear_color = ImVec4(0.3f, 0.3f, 0.3f, 1.00f);
     renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(clear_color.x * clear_color.w, clear_color.y * clear_color.w, clear_color.z * clear_color.w, clear_color.w);
     id <MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
     [renderEncoder pushDebugGroup:@"Dear ImGui rendering"];
@@ -138,6 +145,10 @@ void imgui_clap_guiDestroyWith(imgui_clap_editor *e,
                                const clap_host_timer_support_t *)
 {
     e->onGuiDestroy();
+    auto mwin = (icsMetal *)(e->ctx);
+    [mwin stopTimer];
+    [mwin release];
+    e->ctx = nullptr;
 }
 bool imgui_clap_guiSetParentWith(imgui_clap_editor *ed,
                                  const clap_window *win)
@@ -153,6 +164,6 @@ bool imgui_clap_guiSetParentWith(imgui_clap_editor *ed,
 bool imgui_clap_guiSetSizeWith(imgui_clap_editor *ed, int width, int height)
 {
     auto mwin = (icsMetal *)(ed->ctx);
-    [mwin setDrawableSize:NSMakeSize(width, height)];
-    return false;
+    [mwin setBounds:NSMakeRect(0, 0, width, height)];
+    return true;
 }
