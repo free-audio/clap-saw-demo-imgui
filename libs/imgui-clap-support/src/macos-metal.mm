@@ -17,8 +17,9 @@
 @property imgui_clap_editor* editor;
 @property CFRunLoopTimerRef idleTimer;
 @property (nonatomic, strong) id <MTLCommandQueue> commandQueue;
+@property ImGuiContext *imguiContext;
 
-- (id)initWithEditor:(imgui_clap_editor *)ed  withFrame:(NSRect)r;
+- (id)initWithEditor:(imgui_clap_editor *)ed  withParent:(NSView *)v;
 - (void) startTimer;
 - (void) stopTimer;
 - (void) doIdle;
@@ -31,9 +32,9 @@ void timerCallback(CFRunLoopTimerRef timer, void *info)
 }
 
 @implementation  icsMetal
-- (id)initWithEditor:(imgui_clap_editor *)ed withFrame:(NSRect)r
+- (id)initWithEditor:(imgui_clap_editor *)ed withParent:(NSView *)v
 {
-    self = [super initWithFrame:r];
+    self = [super initWithFrame:[v bounds]];
 
     _editor = ed;
 
@@ -42,8 +43,8 @@ void timerCallback(CFRunLoopTimerRef timer, void *info)
     _commandQueue = [self.device newCommandQueue];
 
     IMGUI_CHECKVERSION();
-    if (!ImGui::GetCurrentContext())
-        ImGui::CreateContext();
+    _imguiContext = ImGui::CreateContext();
+    ImGui::SetCurrentContext(_imguiContext);
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
@@ -54,7 +55,7 @@ void timerCallback(CFRunLoopTimerRef timer, void *info)
 
     // Setup Renderer backend
     ImGui_ImplMetal_Init(self.device);
-    ImGui_ImplOSX_Init(self);
+    ImGui_ImplOSX_Init(v);
 
     _idleTimer = nil;
 
@@ -85,11 +86,13 @@ void timerCallback(CFRunLoopTimerRef timer, void *info)
 
 - (void)doIdle
 {
+    ImGui::SetCurrentContext(_imguiContext);
     [self setNeedsDisplay:YES];
 }
 
 - (void)drawInMTKView:(nonnull MTKView *)view
 {
+    ImGui::SetCurrentContext(_imguiContext);
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize.x = view.bounds.size.width;
     io.DisplaySize.y = view.bounds.size.height;
@@ -156,7 +159,7 @@ bool imgui_clap_guiSetParentWith(imgui_clap_editor *ed,
                                  const clap_window *win)
 {
     auto nsv = (NSView *)win->cocoa;
-    auto mwin = [[icsMetal alloc] initWithEditor:ed withFrame:[nsv bounds]];
+    auto mwin = [[icsMetal alloc] initWithEditor:ed withParent: nsv];
     [nsv addSubview:mwin];
     [mwin startTimer];
     ed->ctx = mwin;
