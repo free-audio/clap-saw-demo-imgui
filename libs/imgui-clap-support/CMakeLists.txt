@@ -16,7 +16,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC clap-core)
 
 if (APPLE)
     target_sources(${PROJECT_NAME} PUBLIC
-            src/apple-macos.mm
+            src/macos-metal.mm
             ${IMGUI_SOURCE_DIR}/backends/imgui_impl_metal.mm
             ${IMGUI_SOURCE_DIR}/backends/imgui_impl_osx.mm
             )
