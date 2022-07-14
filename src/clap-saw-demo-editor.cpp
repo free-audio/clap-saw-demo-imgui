@@ -55,7 +55,7 @@ bool ClapSawDemo::guiCreate(const char *api, bool isFloating) noexcept
 {
     _DBGMARK;
     assert(!editor);
-    editor = new ClapSawDemoEditor();
+    editor = new ClapSawDemoEditor(toUiQ, fromUiQ, dataCopyForUI, [this]() { editorParamsFlush(); });
     const clap_host_timer_support_t *timer{nullptr};
     _host.getExtension(timer, CLAP_EXT_TIMER_SUPPORT);
     return imgui_clap_guiCreateWith(editor, timer);
@@ -157,9 +157,55 @@ bool ClapSawDemo::guiAdjustSize(uint32_t *width, uint32_t *height) noexcept
     return true;
 }
 
+ClapSawDemoEditor::ClapSawDemoEditor(ClapSawDemo::SynthToUI_Queue_t &i,
+                                     ClapSawDemo::UIToSynth_Queue_t &o,
+                                     const ClapSawDemo::DataCopyForUI &d, std::function<void()> pf)
+: inbound(i), outbound(o), synthData(d), paramRequestFlush(std::move(pf))
+{
+
+}
 void ClapSawDemoEditor::onRender() {
+    ClapSawDemo::ToUI r;
+    while (inbound.try_dequeue(r))
+    {
+        if (r.type == ClapSawDemo::ToUI::MType::PARAM_VALUE)
+        {
+#if 0
+            auto q = paramIdToCControl.find(r.id);
+
+            if (q != paramIdToCControl.end())
+            {
+                auto cc = q->second;
+                auto val = r.value;
+
+                switch (r.id)
+                {
+                case ClapSawDemo::pmUnisonSpread:
+                    val = val / 100.0;
+                    break;
+                case ClapSawDemo::pmOscDetune:
+                    val = val / 200.0;
+                    break;
+                case ClapSawDemo::pmUnisonCount:
+                    val = val / SawDemoVoice::max_uni;
+                    break;
+                case ClapSawDemo::pmCutoff:
+                    val = (val - 1) / 126.0;
+                    break;
+
+                default:
+                    break;
+                }
+                cc->setValue(val);
+                cc->invalid();
+            }
+#endif
+        }
+    }
+
     ImGui::Begin("Window 1");
     ImGui::Text( "Heya There" );
+    ImGui::Text( "Polyphony is %d", (int)synthData.polyphony);
     ImGui::End();
 }
 
