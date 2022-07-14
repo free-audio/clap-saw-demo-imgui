@@ -42,7 +42,8 @@ void timerCallback(CFRunLoopTimerRef timer, void *info)
     _commandQueue = [self.device newCommandQueue];
 
     IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
+    if (!ImGui::GetCurrentContext())
+        ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
@@ -79,6 +80,7 @@ void timerCallback(CFRunLoopTimerRef timer, void *info)
     {
         CFRunLoopRemoveTimer(CFRunLoopGetMain(), _idleTimer, kCFRunLoopCommonModes);
     }
+    // At some point - last one out - we should delete the context
 }
 
 - (void)doIdle
