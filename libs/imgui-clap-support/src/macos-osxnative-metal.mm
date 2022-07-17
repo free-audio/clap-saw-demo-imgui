@@ -55,7 +55,7 @@ void timerCallback(CFRunLoopTimerRef timer, void *info)
 
     // Setup Renderer backend
     ImGui_ImplMetal_Init(self.device);
-    ImGui_ImplOSX_Init(v);
+    ImGui_ImplOSX_Init(self);
 
     _idleTimer = nil;
 
