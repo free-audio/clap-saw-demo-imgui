@@ -175,8 +175,15 @@ void ClapSawDemoEditor::onRender() {
         }
     }
 
-    ImGui::Begin("Window 1");
-    ImGui::Text( "Heya There lets just use text to make this window big" );
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(viewport->WorkPos);
+    ImGui::SetNextWindowSize(viewport->WorkSize);
+
+    bool is_open = true;
+    ImGui::Begin("Imgui Saw Demo", &is_open , ImGuiWindowFlags_NoTitleBar);
+    const char* title = "Imgui Saw Demo";
+    ImGui::SetCursorPosX( (ImGui::GetWindowWidth() - ImGui::CalcTextSize(title).x) / 2.f);
+    ImGui::Text( "%s", title );
     ImGui::Text( "Polyphony is %d", (int)synthData.polyphony);
 
     auto makeSliderForParam = [this](auto pid, const char* label, float min, float max)
