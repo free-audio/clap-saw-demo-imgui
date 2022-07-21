@@ -425,7 +425,8 @@ void timerCallback(CFRunLoopTimerRef timer, void *info)
     int button = (int)[event buttonNumber];
     if (button >= 0 && button < ImGuiMouseButton_COUNT)
         io.AddMouseButtonEvent(button, false);
-    return io.WantCaptureMouse;
+    // return io.WantCaptureMouse;
+    return;
 }
 
 -(void)otherMouseDown:(NSEvent *)event
@@ -516,7 +517,8 @@ void timerCallback(CFRunLoopTimerRef timer, void *info)
             case ImGuiKey_LeftAlt:    mask = 0x0020; break;
             case ImGuiKey_RightAlt:   mask = 0x0040; break;
             default:
-                return io.WantCaptureKeyboard;
+                // return io.WantCaptureKeyboard;
+                return;
         }
 
         NSEventModifierFlags modifier_flags = [event modifierFlags];
@@ -543,7 +545,8 @@ void timerCallback(CFRunLoopTimerRef timer, void *info)
     // scrollingDeltaY. When these are added to the current x and y positions of the scrolling view,
     // it appears to jump up or down. It can be observed in Preview, various JetBrains IDEs and here.
     if (event.phase == NSEventPhaseCancelled)
-        return false;
+        //return false;
+        return;
 
     double wheel_dx = 0.0;
     double wheel_dy = 0.0;
