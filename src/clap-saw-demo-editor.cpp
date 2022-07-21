@@ -180,8 +180,9 @@ void ClapSawDemoEditor::onRender() {
     ImGui::SetNextWindowSize(viewport->WorkSize);
 
     bool is_open = true;
-    ImGui::Begin("Imgui Saw Demo", &is_open , ImGuiWindowFlags_NoTitleBar);
-    const char* title = "Imgui Saw Demo";
+    ImGui::Begin("Imgui Saw Demo", &is_open , ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize |
+                 ImGuiWindowFlags_NoDecoration);
+    const char* title = "IMGUI SAW DEMO";
     ImGui::SetCursorPosX( (ImGui::GetWindowWidth() - ImGui::CalcTextSize(title).x) / 2.f);
     ImGui::Text( "%s", title );
     ImGui::Text( "Polyphony is %d", (int)synthData.polyphony);
@@ -224,14 +225,29 @@ void ClapSawDemoEditor::onRender() {
             }
         }
     };
-
+    
     makeSliderForParam(ClapSawDemo::pmUnisonCount, "uni count", 1, SawDemoVoice::max_uni);
     makeSliderForParam(ClapSawDemo::pmUnisonSpread, "uni spread", 0, 100);
     makeSliderForParam(ClapSawDemo::pmOscDetune, "osc detune", -200, 200);
 
     makeSliderForParam(ClapSawDemo::pmCutoff, "cutoff", 1, 127);
     makeSliderForParam(ClapSawDemo::pmResonance, "resonance", 0, 1);
-
+    
+    char buffer[8] = {};
+    ImGui::InputText( "Test Text Input", buffer, sizeof(buffer));
+    if (buffer[0] != 0)
+    {
+        static std::string lastStr;
+        std::string newStr = buffer;
+        
+        if (newStr != lastStr)
+        {
+            fprintf(stderr, "test text: %s\n", buffer);
+            lastStr = newStr;
+        }
+    }
+    
+    
     ImGui::End();
 }
 
