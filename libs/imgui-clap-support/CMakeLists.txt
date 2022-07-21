@@ -10,6 +10,7 @@ add_library(${PROJECT_NAME} STATIC
         ${IMGUI_SOURCE_DIR}/imgui_widgets.cpp
         ${IMGUI_SOURCE_DIR}/imgui_draw.cpp
         )
+
 target_include_directories(${PROJECT_NAME} PUBLIC include)
 target_include_directories(${PROJECT_NAME} PUBLIC ${IMGUI_SOURCE_DIR})
 target_link_libraries(${PROJECT_NAME} PUBLIC clap-core)
@@ -28,7 +29,6 @@ if (APPLE)
         target_sources(${PROJECT_NAME} PUBLIC
                 src/macos-osxnative-metal.mm
                 ${IMGUI_SOURCE_DIR}/backends/imgui_impl_metal.mm
-                ${IMGUI_SOURCE_DIR}/backends/imgui_impl_osx.mm
                 )
         target_link_libraries(${PROJECT_NAME} PUBLIC "-framework CoreFoundation" "-framework GameController" "-framework Cocoa" "-framework Metal" "-framework MetalKit")
     endif()
