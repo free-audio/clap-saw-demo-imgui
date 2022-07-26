@@ -24,6 +24,7 @@ option(COPY_AFTER_BUILD "Copy the clap to ~/Library on MACOS, ~/.clap on linux" 
 add_subdirectory(libs/clap EXCLUDE_FROM_ALL)
 add_subdirectory(libs/clap-helpers EXCLUDE_FROM_ALL)
 add_subdirectory(libs/readerwriterqueue EXCLUDE_FROM_ALL)
+add_subdirectory(libs/glfw EXCLUDE_FROM_ALL)
 
 set(IMGUI_SOURCE_DIR ${CMAKE_SOURCE_DIR}/libs/imgui)
 add_subdirectory(libs/imgui-clap-support EXCLUDE_FROM_ALL)
