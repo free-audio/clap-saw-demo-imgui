@@ -33,3 +33,11 @@ if (APPLE)
         target_link_libraries(${PROJECT_NAME} PUBLIC "-framework CoreFoundation" "-framework GameController" "-framework Cocoa" "-framework Metal" "-framework MetalKit")
     endif()
 endif()
+
+if(WIN32)
+   target_sources(${PROJECT_NAME} PUBLIC
+            src/win-dx12.cpp
+            ${IMGUI_SOURCE_DIR}/backends/imgui_impl_win32.cpp
+            ${IMGUI_SOURCE_DIR}/backends/imgui_impl_dx12.cpp
+            )
+endif()

@@ -1,7 +1,10 @@
 cmake_minimum_required(VERSION 3.15)
+cmake_policy(SET CMP0091 NEW) # use CMAKE_MSVC_RUNTIME_LIBRARY
 
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-set(CMAKE_OSX_DEPLOYMENT_TARGET 10.11 CACHE STRING "Build for 10.1")
+if (APPLE)
+    set(CMAKE_OSX_DEPLOYMENT_TARGET 10.11 CACHE STRING "Build for 10.1")
+endif()
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -14,9 +17,9 @@ project(clap-saw-demo-imgui VERSION 0.9.0 LANGUAGES C CXX)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 17)
 
-
-# use asan as an option (currently mac only)
-option(USE_SANITIZER "Build and link with ASAN" FALSE)
+if (APPLE)
+    option(USE_SANITIZER "Build and link with ASAN" FALSE)
+endif()
 
 # Copy on mac (could expand to other platforms)
 option(COPY_AFTER_BUILD "Copy the clap to ~/Library on MACOS, ~/.clap on linux" FALSE)
@@ -83,6 +86,7 @@ elseif(UNIX)
     endif()
 
 else()
+    target_link_libraries(${PROJECT_NAME} d3d12.lib dxgi.lib d3dcompiler.lib dxguid.lib)
     target_compile_definitions(${PROJECT_NAME} PRIVATE IS_WIN=1)
     set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".clap" PREFIX "")
 endif()
