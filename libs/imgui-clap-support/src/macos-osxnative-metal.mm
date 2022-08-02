@@ -143,8 +143,6 @@ static ImGuiKey ImGui_ImplOSX_KeyCodeToImGuiKey(int key_code)
 
 // copied end
 
-static int GWindowCount = 0;
-
 @interface icsMetal : MTKView<MTKViewDelegate, NSTextInputClient>
 @property imgui_clap_editor* editor;
 @property CFRunLoopTimerRef idleTimer;
@@ -152,7 +150,6 @@ static int GWindowCount = 0;
 @property ImGuiContext *imguiContext;
 @property bool wasAcceptingMouseMove;
 @property NSTrackingRectTag trackingRectTag;
-@property int windowCount;
 @property (retain) NSTextInputContext* textInputContext;
 @property CFTimeInterval Time;
 
@@ -185,8 +182,6 @@ void timerCallback(CFRunLoopTimerRef timer, void *info)
     self.delegate = self;
     _commandQueue = [self.device newCommandQueue];
     self.trackingRectTag = 0;
-    self.windowCount = GWindowCount;
-    GWindowCount++;
     
     _idleTimer = nil;
 
@@ -212,7 +207,7 @@ void timerCallback(CFRunLoopTimerRef timer, void *info)
     io.BackendPlatformUserData = self;
     //io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;           // We can honor GetMouseCursor() values (optional)
     //io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
-    io.BackendPlatformName = "imgui-clap-support-osx";
+    io.BackendPlatformName = "imgui-clap-support-osx-native-metal";
     
     // Copyied from igui_impl_osx.mm:
     
@@ -704,7 +699,7 @@ void imgui_clap_guiDestroyWith(imgui_clap_editor *e,
     [mwin release];
     e->ctx = nullptr;
 }
-bool imgui_clap_guiSetParentWith(imgui_clap_editor *ed,
+bool imgui_clap_guiSetParentWith_(imgui_clap_editor *ed,
                                  const clap_window *win)
 {
     auto nsv = (NSView *)win->cocoa;
@@ -715,6 +710,22 @@ bool imgui_clap_guiSetParentWith(imgui_clap_editor *ed,
 
     return true;
 }
+
+bool imgui_clap_guiSetParentWith(imgui_clap_editor *ed,
+                                 const clap_window *win)
+{
+    auto nsv = (NSView *)win->cocoa;
+    auto mwin = [[icsMetal alloc] initWithEditor:ed withParent: nsv];
+    
+    [nsv addSubview:mwin];
+    [mwin startTimer];
+    ed->ctx = mwin;
+
+    return true;
+}
+
+
+
 bool imgui_clap_guiSetSizeWith(imgui_clap_editor *ed, int width, int height)
 {
     auto mwin = (icsMetal *)(ed->ctx);

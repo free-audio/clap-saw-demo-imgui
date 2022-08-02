@@ -180,9 +180,18 @@ void ClapSawDemoEditor::onRender() {
     ImGui::SetNextWindowSize(viewport->WorkSize);
 
     bool is_open = true;
+
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+    std::string titleStr = "IMGUI SAW DEMO (";
+    titleStr += io.BackendRendererName;
+    titleStr += ", ";
+    titleStr += io.BackendPlatformName;
+    titleStr += ")";
+    
     ImGui::Begin("Imgui Saw Demo", &is_open , ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize |
                  ImGuiWindowFlags_NoDecoration);
-    const char* title = "IMGUI SAW DEMO";
+    const char* title = titleStr.c_str();
     ImGui::SetCursorPosX( (ImGui::GetWindowWidth() - ImGui::CalcTextSize(title).x) / 2.f);
     ImGui::Text( "%s", title );
     ImGui::Text( "Polyphony is %d", (int)synthData.polyphony);
