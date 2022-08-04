@@ -172,11 +172,11 @@ void timerCallback(CFRunLoopTimerRef timer, void *info)
     NSRect _imeRect;
 }
 
-- (id)initWithEditor:(imgui_clap_editor *)ed withParent:(NSView *)v
+- (id)initWithEditor:(imgui_clap_editor *)editor withParent:(NSView *)parentView
 {
-    self = [super initWithFrame:[v bounds]];
+    self = [super initWithFrame:[parentView bounds]];
 
-    _editor = ed;
+    _editor = editor;
 
     self.device = MTLCreateSystemDefaultDevice();
     self.delegate = self;
