@@ -16,7 +16,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${IMGUI_SOURCE_DIR})
 target_link_libraries(${PROJECT_NAME} PUBLIC clap-core)
 
 if (APPLE)
-    set(APPLE_GLFW TRUE)
+    set(APPLE_GLFW FALSE)
     if (${APPLE_GLFW})
 		add_dependencies(${PROJECT_NAME} glfw)
         target_sources(${PROJECT_NAME} PUBLIC
