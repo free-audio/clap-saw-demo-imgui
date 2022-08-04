@@ -183,6 +183,8 @@ void timerCallback(CFRunLoopTimerRef timer, void *info)
     _commandQueue = [self.device newCommandQueue];
     self.trackingRectTag = 0;
     
+ //   self.autoresizingMask = NSViewWidthSizable | NSViewHeightSizable;
+    
     _idleTimer = nil;
 
     IMGUI_CHECKVERSION();
@@ -372,9 +374,7 @@ void timerCallback(CFRunLoopTimerRef timer, void *info)
     [commandBuffer commit];
 }
 
-- (void)mtkView:(nonnull MTKView *)view drawableSizeWillChange:(CGSize)size;
-{
-}
+- (void)mtkView:(nonnull MTKView *)view drawableSizeWillChange:(CGSize)size {}
 
 - (BOOL)acceptsFirstResponder
 {
@@ -724,11 +724,9 @@ bool imgui_clap_guiSetParentWith(imgui_clap_editor *ed,
     return true;
 }
 
-
-
 bool imgui_clap_guiSetSizeWith(imgui_clap_editor *ed, int width, int height)
 {
     auto mwin = (icsMetal *)(ed->ctx);
-    [mwin setBounds:NSMakeRect(0, 0, width, height)];
+    [mwin setFrameSize:NSMakeSize(width, height)];
     return true;
 }
