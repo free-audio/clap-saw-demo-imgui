@@ -6,6 +6,7 @@
 
 #include <mutex>
 #include <system_error>
+#include <optional>
 
 #include <d3d12.h>
 #include <dxgi1_4.h>
@@ -122,9 +123,8 @@ public:
                          _T("ImGui-CLAP-DX12-WindowClass"), nullptr};
         ::RegisterClassEx(&_windowClass);
 
-        RECT clientRect, windowRect;
+        RECT clientRect;
         ::GetClientRect(windowHandleParent, &clientRect);
-        ::GetWindowRect(windowHandleParent, &windowRect);
 
         _windowHandle = ::CreateWindow(_windowClass.lpszClassName, _T("ImGui Clap Saw Demo"),
             WS_CHILD | WS_VISIBLE, 0, 0, clientRect.right - clientRect.left, clientRect.bottom - clientRect.top, windowHandleParent, NULL,
@@ -133,6 +133,7 @@ public:
 
         ::SetParent(_windowHandle, windowHandleParent);
         ::UpdateWindow(_windowHandle);
+        ::SetFocus(_windowHandle);
 
         _imguiContext = ImGui::CreateContext();
         ImGui::SetCurrentContext(_imguiContext);
@@ -151,14 +152,7 @@ public:
         createCommandListAndQueue();
         createFences();
         createSwapChain(_windowHandle);
-
-        for (UINT i = 0; i < DX12Globals::numBackBuffers; i++)
-        {
-            ID3D12Resource *backBuffer = NULL;
-            _swapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer));
-            globals._device->CreateRenderTargetView(backBuffer, nullptr, _mainRenderTargetDescriptor[i]);
-            _mainRenderTargetResource[i] = backBuffer;
-        }
+        createRenderTargets();
 
         // Setup Platform/Renderer backends
         ImGui_ImplWin32_Init(_windowHandle);
@@ -281,9 +275,33 @@ public:
         frameCtx->FenceValue = fenceValue;
     }
 
-    void setImGuiContext() { ImGui::SetCurrentContext(_imguiContext); }
+    void setImGuiContext() 
+    { 
+        ImGui::SetCurrentContext(_imguiContext); 
+    }
 
-      private:
+    HWND getWindowHandle()
+    { 
+        return _windowHandle;
+    }
+
+    bool resizeWindow(int width, int height) 
+    { 
+        if (_windowHandle == nullptr)
+            return false;
+        return ::SetWindowPos(_windowHandle, nullptr, 0, 0, width, height,
+                              SWP_NOMOVE | SWP_NOOWNERZORDER | SWP_NOZORDER);
+    }
+
+    void resize(UINT width, UINT height) 
+    {
+        waitForLastSubmittedFrame();
+        cleanupRenderTargets();
+        resizeBuffers(width, height);
+        createRenderTargets();
+    }
+
+private:
     bool createHeapDescriptors() 
     {
         D3D12_DESCRIPTOR_HEAP_DESC rtvDesc = {};
@@ -371,11 +389,8 @@ public:
         IDXGISwapChain1 *swapChain1 = nullptr;
         if (CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory)) != S_OK)
             return false;
-        HRESULT result = dxgiFactory->CreateSwapChainForHwnd(_commandQueue, windowHandle, &sd, nullptr,
-                                                             nullptr, &swapChain1);
-        std::string message = std::system_category().message(result);
-        fprintf(stderr, "CreateSwapChainForHwnd -> %s\n", message.c_str());
-        if (result != S_OK)
+        if(dxgiFactory->CreateSwapChainForHwnd(_commandQueue, windowHandle, &sd, nullptr,
+                                                             nullptr, &swapChain1) != S_OK)
                 return false;
         if (swapChain1->QueryInterface(IID_PPV_ARGS(&_swapChain)) != S_OK)
                 return false;
@@ -390,35 +405,53 @@ public:
 
     void waitForLastSubmittedFrame() 
     {
-        UINT nextFrameIndex = _frameIndex + 1;
-        _frameIndex = nextFrameIndex;
+        FrameContext *frameCtx = &_frameContext[_frameIndex % DX12Globals::numOfFramesInFlight];
 
-        HANDLE waitableObjects[] = {_swapChainWaitableObject, nullptr};
-        DWORD numWaitableObjects = 1;
-
-        FrameContext *frameCtx = &_frameContext[nextFrameIndex % DX12Globals::numOfFramesInFlight];
         UINT64 fenceValue = frameCtx->FenceValue;
-        if (fenceValue != 0) // means no fence was signaled
-        {
-            frameCtx->FenceValue = 0;
-            _fence->SetEventOnCompletion(fenceValue, _fenceEvent);
-            waitableObjects[1] = _fenceEvent;
-            numWaitableObjects = 2;
-        }
+        if (fenceValue == 0)
+            return; // No fence was signaled
 
-        ::WaitForMultipleObjects(numWaitableObjects, waitableObjects, TRUE, INFINITE);
+        frameCtx->FenceValue = 0;
+        if (_fence->GetCompletedValue() >= fenceValue)
+            return;
+
+        _fence->SetEventOnCompletion(fenceValue, _fenceEvent);
+        WaitForSingleObject(_fenceEvent, INFINITE);
     }
 
-    void cleanup() 
+    bool resizeBuffers(UINT width, UINT height) 
     {
-        waitForLastSubmittedFrame();
+        HRESULT result = _swapChain->ResizeBuffers(0, width, height, DXGI_FORMAT_UNKNOWN, DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT);
+        assert(SUCCEEDED(result) && "Failed to resize swapchain.");
+        return SUCCEEDED(result);
+    }
 
+    void createRenderTargets() 
+    {
+        for (UINT i = 0; i < DX12Globals::numBackBuffers; i++)
+        {
+            ID3D12Resource *backBuffer = nullptr;
+            _swapChain->GetBuffer(i, IID_PPV_ARGS(&backBuffer));
+            globals._device->CreateRenderTargetView(backBuffer, nullptr,
+                                                    _mainRenderTargetDescriptor[i]);
+            _mainRenderTargetResource[i] = backBuffer;
+        }
+    }
+
+    void cleanupRenderTargets() 
+    {
         for (UINT i = 0; i < DX12Globals::numBackBuffers; i++)
             if (_mainRenderTargetResource[i])
             {
                 _mainRenderTargetResource[i]->Release();
                 _mainRenderTargetResource[i] = nullptr;
             }
+    }
+
+    void cleanup() 
+    {
+        waitForLastSubmittedFrame();
+        cleanupRenderTargets();
 
         if (_swapChain)
         {
@@ -468,24 +501,24 @@ public:
         }
     }
 
-    ImGuiContext *_imguiContext = nullptr;
-    imgui_clap_editor *_editor = nullptr;
+    ImGuiContext* _imguiContext = nullptr;
+    imgui_clap_editor* _editor = nullptr;
 
     WNDCLASSEX _windowClass = {};
     HWND _windowHandle = nullptr;
 
     UINT _frameIndex = 0;
     FrameContext _frameContext[DX12Globals::numOfFramesInFlight] = {};
-    ID3D12Resource *_mainRenderTargetResource[DX12Globals::numBackBuffers] = {};
+    ID3D12Resource* _mainRenderTargetResource[DX12Globals::numBackBuffers] = {};
     D3D12_CPU_DESCRIPTOR_HANDLE _mainRenderTargetDescriptor[DX12Globals::numBackBuffers] = {};
     
-    IDXGISwapChain3 *_swapChain = nullptr;
+    IDXGISwapChain3* _swapChain = nullptr;
     HANDLE _swapChainWaitableObject = nullptr;
 
-    ID3D12CommandQueue *_commandQueue = nullptr;
-    ID3D12GraphicsCommandList *_commandList = nullptr;
+    ID3D12CommandQueue* _commandQueue = nullptr;
+    ID3D12GraphicsCommandList* _commandList = nullptr;
 
-    ID3D12Fence *_fence = nullptr;
+    ID3D12Fence* _fence = nullptr;
     HANDLE _fenceEvent = nullptr;
     UINT64 _fenceLastSignaledValue = 0;
 
@@ -507,34 +540,41 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     if (dx12context)
         dx12context->setImGuiContext();
 
+    switch (msg)
+    {
+        case WM_MOUSEMOVE:
+        {
+            auto focus = ::GetFocus();
+            if (focus != hWnd && dx12context->getWindowHandle() == hWnd)
+            {
+                ::SetFocus(hWnd);
+            }    
+        }
+            break;
+        
+        default:
+            break;
+    }
+
     if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
         return true;
 
     switch (msg)
     {
-    case WM_SIZE: /*
-        if (g_pd3dDevice != NULL && wParam != SIZE_MINIMIZED)
-        {
-            WaitForLastSubmittedFrame();
-            CleanupRenderTarget();
-            HRESULT result = g_pSwapChain->ResizeBuffers(
-                0, (UINT)LOWORD(lParam), (UINT)HIWORD(lParam), DXGI_FORMAT_UNKNOWN,
-                DXGI_SWAP_CHAIN_FLAG_FRAME_LATENCY_WAITABLE_OBJECT);
-            assert(SUCCEEDED(result) && "Failed to resize swapchain.");
-            CreateRenderTarget();
-        } */
-        return 0;
-    case WM_SYSCOMMAND:
-        if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
+        case WM_SIZE:
+            if (globals._device != nullptr && wParam != SIZE_MINIMIZED)
+                dx12context->resize((UINT)LOWORD(lParam), (UINT)HIWORD(lParam));
             return 0;
-        break;
-    case WM_DESTROY:
-        // ::PostQuitMessage(0);
-        return 0;
+        case WM_SYSCOMMAND:
+            if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
+                return 0;
+            break;
+        case WM_TIMER:
+            dx12context->render();
+            return 0;
+        default:
+            break;
 
-    case WM_TIMER:
-        dx12context->render();
-        return 0;
     }
     return ::DefWindowProc(hWnd, msg, wParam, lParam);
 }
@@ -566,5 +606,10 @@ bool imgui_clap_guiSetParentWith(imgui_clap_editor *e,
 }
 bool imgui_clap_guiSetSizeWith(imgui_clap_editor *e, int width, int height)
 {
-    return true;
+    if (auto context = (ClapSupport::DX12Context *)e->ctx)
+    {
+        return context->resizeWindow(width, height);
+    }
+
+    return false;
 }
