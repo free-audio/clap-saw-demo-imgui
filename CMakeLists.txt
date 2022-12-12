@@ -29,7 +29,7 @@ add_subdirectory(libs/clap-helpers EXCLUDE_FROM_ALL)
 add_subdirectory(libs/readerwriterqueue EXCLUDE_FROM_ALL)
 
 set(IMGUI_SOURCE_DIR ${CMAKE_SOURCE_DIR}/libs/imgui)
-add_subdirectory(libs/imgui-clap-support EXCLUDE_FROM_ALL)
+add_subdirectory(libs/clap-imgui-support EXCLUDE_FROM_ALL)
 
 add_library(${PROJECT_NAME} MODULE
         src/clap-saw-demo.cpp
