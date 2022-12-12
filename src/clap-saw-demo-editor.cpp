@@ -268,17 +268,19 @@ void ClapSawDemoEditor::dequeueParamUpdates()
 
 void ClapSawDemoEditor::onRender()
 {
-    dequeueParamUpdates();
-    
+    dequeueParamUpdates(); // Do not remove this
+
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-    
-    std::string titleStr = "CLAP SAW DEMO IMGUI";
     
     bool is_open = true;
     ImGui::Begin("Imgui Saw Demo", &is_open , ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize |
                  ImGuiWindowFlags_NoDecoration);
+
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
     
+    // HEADER
+    std::string titleStr = "CLAP SAW DEMO IMGUI";
+        
     ImColor col32(.16f, .29f, .48f , 0.54f * 0.5f);
     draw_list->AddRectFilled(ImVec2(0, 0), ImVec2(ImGui::GetWindowWidth(), 26.f), col32);
     
@@ -289,6 +291,8 @@ void ClapSawDemoEditor::onRender()
     ImGui::Text( "%s", title );
 
     ImGui::Separator();
+    
+    // PARAMETER UI
     
     ImGui::Text("Osc (Polyphony %d)", (int)synthData.polyphony);
 
@@ -322,6 +326,8 @@ void ClapSawDemoEditor::onRender()
     addSliderForParam(ClapSawDemo::pmResonance, "resonance", 0, 1);
 
     ImGui::Separator();
+
+    // FOOTER
     
     std::string footerStr = "CLAP v";
     footerStr += std::to_string(CLAP_VERSION_MAJOR);
