@@ -10,6 +10,7 @@
 
 namespace sst::clap_saw_demo
 {
+
 struct ClapSawDemoEditor : public imgui_clap_editor
 {
     ClapSawDemo::SynthToUI_Queue_t &inbound;
@@ -19,11 +20,17 @@ struct ClapSawDemoEditor : public imgui_clap_editor
 
     ClapSawDemoEditor(ClapSawDemo::SynthToUI_Queue_t &, ClapSawDemo::UIToSynth_Queue_t &,
                       const ClapSawDemo::DataCopyForUI &, std::function<void()>);
+    
+    void addSliderForParam(clap_id pid, const char* label, float min, float max);
+    void addSwitchForParam(clap_id pid, const char* label, bool reverse);
+    void addRadioButtonForParam(clap_id pid, std::vector<std::pair<int, const char*>>);
 
     void onRender() override;
+    void dequeueParamUpdates();
 
     std::unordered_map<clap_id, double> paramCopy;
     std::unordered_map<clap_id, bool> paramInEdit;
 };
+
 } // namespace sst::clap_saw_demo
 #endif

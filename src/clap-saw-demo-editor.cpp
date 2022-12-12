@@ -168,7 +168,93 @@ ClapSawDemoEditor::ClapSawDemoEditor(ClapSawDemo::SynthToUI_Queue_t &i,
 {
 
 }
-void ClapSawDemoEditor::onRender() {
+
+void ClapSawDemoEditor::addSliderForParam(clap_id pid, const char* label, float min, float max)
+{
+    float co = paramCopy[pid];
+    auto wasInEdit = paramInEdit[pid];
+    if (ImGui::SliderFloat(label, &co, min, max))
+    {
+        if (!wasInEdit)
+        {
+            paramInEdit[pid] = true;
+            auto q = ClapSawDemo::FromUI();
+            q.id = pid;
+            q.type = ClapSawDemo::FromUI::MType::BEGIN_EDIT;
+            q.value = co;
+            outbound.try_enqueue(q);
+        }
+        if (co != paramCopy[pid])
+        {
+            auto q = ClapSawDemo::FromUI();
+            q.id = pid;
+            q.type = ClapSawDemo::FromUI::MType::ADJUST_VALUE;
+            q.value = co;
+            outbound.try_enqueue(q);
+            paramCopy[pid] = co;
+        }
+    }
+    else
+    {
+        if (wasInEdit)
+        {
+            paramInEdit[pid] = false;
+            auto q = ClapSawDemo::FromUI();
+            q.id = pid;
+            q.type = ClapSawDemo::FromUI::MType::END_EDIT;
+            q.value = co;
+            outbound.try_enqueue(q);
+        }
+    }
+}
+
+void ClapSawDemoEditor::addSwitchForParam(clap_id pid, const char* label, bool reverse)
+{
+    bool co;
+    
+    if (reverse)
+        co = paramCopy[pid] > 0.5f ? false : true;
+    else
+        co = paramCopy[pid] < 0.5f ? false : true;
+    
+    if (ImGui::Checkbox(label, &co))
+    {
+        auto q = ClapSawDemo::FromUI();
+        q.id = pid;
+        q.type = ClapSawDemo::FromUI::MType::ADJUST_VALUE;
+        if (reverse)
+            q.value = co ? 0.f : 1.f;
+        else
+            q.value = co ? 1.f : 0.f;
+        outbound.try_enqueue(q);
+        paramCopy[pid] = q.value;
+    }
+}
+
+void ClapSawDemoEditor::addRadioButtonForParam(clap_id pid, std::vector<std::pair<int, const char*>> modes)
+{
+    int prevMode = paramCopy[pid];
+    int editMode = prevMode;
+    for (const auto& mode : modes)
+    {
+        ImGui::RadioButton(mode.second, &editMode, mode.first); ImGui::SameLine();
+    }
+    ImGui::NewLine();
+    
+    if (prevMode != editMode)
+    {
+        auto q = ClapSawDemo::FromUI();
+        q.id = pid;
+        q.type = ClapSawDemo::FromUI::MType::ADJUST_VALUE;
+        q.value = editMode;
+        outbound.try_enqueue(q);
+        paramCopy[pid] = editMode;
+    }
+    
+}
+
+void ClapSawDemoEditor::dequeueParamUpdates()
+{
     ClapSawDemo::ToUI r;
     while (inbound.try_dequeue(r))
     {
@@ -178,17 +264,17 @@ void ClapSawDemoEditor::onRender() {
             paramInEdit[r.id] = false;
         }
     }
+}
 
-    ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImGui::SetNextWindowPos(viewport->WorkPos);
-    ImGui::SetNextWindowSize(viewport->WorkSize);
-
-    bool is_open = true;
-
+void ClapSawDemoEditor::onRender()
+{
+    dequeueParamUpdates();
+    
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     
     std::string titleStr = "CLAP SAW DEMO IMGUI";
-
+    
+    bool is_open = true;
     ImGui::Begin("Imgui Saw Demo", &is_open , ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize |
                  ImGuiWindowFlags_NoDecoration);
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
@@ -200,133 +286,42 @@ void ClapSawDemoEditor::onRender() {
     auto titleSize = ImGui::CalcTextSize(title);
     ImGui::SetCursorPosX( (ImGui::GetWindowWidth() - titleSize.x) / 2.f);
 
-    
     ImGui::Text( "%s", title );
 
     ImGui::Separator();
     
-    auto makeSliderForParam = [this](auto pid, const char* label, float min, float max)
-    {
-        float co = paramCopy[pid];
-        auto wasInEdit = paramInEdit[pid];
-        if (ImGui::SliderFloat(label, &co, min, max))
-        {
-            if (!wasInEdit)
-            {
-                paramInEdit[pid] = true;
-                auto q = ClapSawDemo::FromUI();
-                q.id = pid;
-                q.type = ClapSawDemo::FromUI::MType::BEGIN_EDIT;
-                q.value = co;
-                outbound.try_enqueue(q);
-            }
-            if (co != paramCopy[pid])
-            {
-                auto q = ClapSawDemo::FromUI();
-                q.id = pid;
-                q.type = ClapSawDemo::FromUI::MType::ADJUST_VALUE;
-                q.value = co;
-                outbound.try_enqueue(q);
-                paramCopy[pid] = co;
-            }
-        }
-        else
-        {
-            if (wasInEdit)
-            {
-                paramInEdit[pid] = false;
-                auto q = ClapSawDemo::FromUI();
-                q.id = pid;
-                q.type = ClapSawDemo::FromUI::MType::END_EDIT;
-                q.value = co;
-                outbound.try_enqueue(q);
-            }
-        }
-    };
-    
-    auto makeSwitchForParam = [this](auto pid, const char* label, bool reverse)
-    {
-        bool co;
-        
-        if (reverse)
-            co = paramCopy[pid] > 0.5f ? false : true;
-        else
-            co = paramCopy[pid] < 0.5f ? false : true;
-        
-        if (ImGui::Checkbox(label, &co))
-        {
-            auto q = ClapSawDemo::FromUI();
-            q.id = pid;
-            q.type = ClapSawDemo::FromUI::MType::ADJUST_VALUE;
-            if (reverse)
-                q.value = co ? 0.f : 1.f;
-            else
-                q.value = co ? 1.f : 0.f;
-            outbound.try_enqueue(q);
-            paramCopy[pid] = q.value;
-        }
-    };
-    
     ImGui::Text("Osc (Polyphony %d)", (int)synthData.polyphony);
 
-    makeSliderForParam(ClapSawDemo::pmUnisonCount, "uni count", 1, SawDemoVoice::max_uni);
-    makeSliderForParam(ClapSawDemo::pmUnisonSpread, "uni spread", 0, 100);
-    makeSliderForParam(ClapSawDemo::pmOscDetune, "osc detune", -200, 200);
+    addSliderForParam(ClapSawDemo::pmUnisonCount, "uni count", 1, SawDemoVoice::max_uni);
+    addSliderForParam(ClapSawDemo::pmUnisonSpread, "uni spread", 0, 100);
+    addSliderForParam(ClapSawDemo::pmOscDetune, "osc detune", -200, 200);
 
     ImGui::Separator();
     
-    makeSliderForParam(ClapSawDemo::pmPreFilterVCA, "VCA", 0, 1);
-    makeSwitchForParam(ClapSawDemo::pmAmpIsGate, "Amp Envelope", true);
+    addSliderForParam(ClapSawDemo::pmPreFilterVCA, "VCA", 0, 1);
+    addSwitchForParam(ClapSawDemo::pmAmpIsGate, "Amp Envelope", true);
     
     ImGui::BeginDisabled(paramCopy[ClapSawDemo::pmAmpIsGate] > 0.5f);
-    makeSliderForParam(ClapSawDemo::pmAmpAttack, "Attack", 0, 1);
-    makeSliderForParam(ClapSawDemo::pmAmpRelease, "Release", 0, 1);
+    addSliderForParam(ClapSawDemo::pmAmpAttack, "Attack", 0, 1);
+    addSliderForParam(ClapSawDemo::pmAmpRelease, "Release", 0, 1);
     ImGui::EndDisabled();
     
     ImGui::Separator();
     
     ImGui::Text("Filter");
-
-    int prevMode = paramCopy[ClapSawDemo::pmFilterMode];
-    int editMode = prevMode;
-    ImGui::RadioButton("LP", &editMode, SawDemoVoice::StereoSimperSVF::Mode::LP); ImGui::SameLine();
-    ImGui::RadioButton("HP", &editMode, SawDemoVoice::StereoSimperSVF::Mode::HP); ImGui::SameLine();
-    ImGui::RadioButton("BP", &editMode, SawDemoVoice::StereoSimperSVF::Mode::BP); ImGui::SameLine();
-    ImGui::RadioButton("Notch", &editMode, SawDemoVoice::StereoSimperSVF::Mode::NOTCH); ImGui::SameLine();
-    ImGui::RadioButton("Peak", &editMode, SawDemoVoice::StereoSimperSVF::Mode::PEAK); ImGui::SameLine();
-    ImGui::RadioButton("All", &editMode, SawDemoVoice::StereoSimperSVF::Mode::ALL);
-    if (prevMode != editMode)
-    {
-        auto q = ClapSawDemo::FromUI();
-        q.id = ClapSawDemo::pmFilterMode;
-        q.type = ClapSawDemo::FromUI::MType::ADJUST_VALUE;
-        q.value = editMode;
-        outbound.try_enqueue(q);
-        paramCopy[ClapSawDemo::pmFilterMode] = editMode;
-    }
     
-    makeSliderForParam(ClapSawDemo::pmCutoff, "cutoff", 1, 127);
-    makeSliderForParam(ClapSawDemo::pmResonance, "resonance", 0, 1);
+    addRadioButtonForParam(ClapSawDemo::pmFilterMode, {
+        { SawDemoVoice::StereoSimperSVF::Mode::LP, "LP"},
+        { SawDemoVoice::StereoSimperSVF::Mode::BP, "BP"},
+        { SawDemoVoice::StereoSimperSVF::Mode::HP, "HP"},
+        { SawDemoVoice::StereoSimperSVF::Mode::NOTCH, "Notch"},
+        { SawDemoVoice::StereoSimperSVF::Mode::PEAK, "Peak"},
+        { SawDemoVoice::StereoSimperSVF::Mode::ALL, "All"} } );
+    
+    addSliderForParam(ClapSawDemo::pmCutoff, "cutoff", 1, 127);
+    addSliderForParam(ClapSawDemo::pmResonance, "resonance", 0, 1);
 
     ImGui::Separator();
-
-#if 0
-    ImGui::Text("UI Tests");
-    
-    char buffer[8] = {};
-    ImGui::InputText( "Test Text Input", buffer, sizeof(buffer));
-    if (buffer[0] != 0)
-    {
-        static std::string lastStr;
-        std::string newStr = buffer;
-        
-        if (newStr != lastStr)
-        {
-            fprintf(stderr, "test text: %s\n", buffer);
-            lastStr = newStr;
-        }
-    }
-#endif
     
     std::string footerStr = "CLAP v";
     footerStr += std::to_string(CLAP_VERSION_MAJOR);
@@ -344,8 +339,6 @@ void ClapSawDemoEditor::onRender() {
     const char* footer = footerStr.c_str();
     ImGui::SetCursorPosX( (ImGui::GetWindowWidth() - ImGui::CalcTextSize(footer).x) / 2.f);
     ImGui::Text( "%s", footer );
-
-    ImGui::End();
 }
 
 } // namespace sst::clap_saw_demo
