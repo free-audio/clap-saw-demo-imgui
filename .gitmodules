@@ -12,4 +12,4 @@
 	url = https://github.com/ocornut/imgui.git
 [submodule "libs/clap-imgui-support"]
 	path = libs/clap-imgui-support
-	url = https://github.com/u-he-frank/clap-imgui-support
+	url = https://github.com/free-audio/clap-imgui-support
