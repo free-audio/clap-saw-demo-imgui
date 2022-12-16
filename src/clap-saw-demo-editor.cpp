@@ -46,14 +46,6 @@ bool ClapSawDemo::guiIsApiSupported(const char *api, bool isFloating) noexcept
  * a given API. We ignore the API and isFloating here, because we handled them
  * above and assume our host follows the protocol that it only calls us with
  * values which are supported.
- *
- * The important thing from a VSTGUI perspective here is that we have to initialize
- * the VSTGUI static data structures. On Mac and Windows, this is an easy call and
- * we can use the VSTGUI::finally mechanism to clean up. On Linux there is a more
- * complicated global event loop to merge which, thanks to the way VSTGUI structures
- * their event loops, is a touch more awkward. As such the linux code is all in a different
- * cpp file for individual documentation (Please see the README for any linux disclaimers
- * and most recent status).
  */
 bool ClapSawDemo::guiCreate(const char *api, bool isFloating) noexcept
 {
@@ -84,11 +76,6 @@ void ClapSawDemo::guiDestroy() noexcept
  * reparent the editor to that host managed window. It sends a
  * `const clap_window *window` data structure which contains a union of
  * platform specific window pointers.
- *
- * VSTGUI handles reparenting through `VSTGUI::CFrame::open` which consumes
- * a pointer to a native window. This makes adapting easy. Our editor object
- * owns a `CFrame` as its base window, and setParent opens it with the new
- * parent platform specific item handed to it.
  */
 bool ClapSawDemo::guiSetParent(const clap_window *window) noexcept
 {
