@@ -38,7 +38,6 @@ add_library(${PROJECT_NAME} MODULE
         src/clap-saw-demo-pluginentry.cpp 
 )
 target_link_libraries(${PROJECT_NAME} clap-core clap-helpers readerwriterqueue imgui-clap-support)
-target_compile_definitions(${PROJECT_NAME} PUBLIC -DGImGui=GImGuiThreadLocalContext -DIMGUI_USER_CONFIG=\"${PROJECT_SOURCE_DIR}/src/imconfig.h\")
 if(APPLE)
     set_target_properties(${PROJECT_NAME} PROPERTIES
             BUNDLE True
