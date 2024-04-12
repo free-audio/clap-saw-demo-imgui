@@ -48,9 +48,9 @@ ClapSawDemo::~ClapSawDemo()
 
 const char *features[] = {CLAP_PLUGIN_FEATURE_INSTRUMENT, CLAP_PLUGIN_FEATURE_SYNTHESIZER, nullptr};
 clap_plugin_descriptor ClapSawDemo::desc = {CLAP_VERSION,
-                                            "org.surge-synth-team.clap-saw-demo-imgui",
-                                            "Clap Saw Demo Synth (ImgGui version)",
-                                            "Surge Synth Team",
+                                            "org.surge-synth-team.clap-saw-demo",
+                                            "Clap Saw Demo Synth (ImGui Version)",
+                                            "Surge Synth Team, U-He",
                                             "https://surge-synth-team.org",
                                             "",
                                             "",
@@ -240,8 +240,59 @@ bool ClapSawDemo::paramsValueToText(clap_id paramId, double value, char *display
     }
     }
 
-    strncpy(display, sValue.c_str(), CLAP_NAME_SIZE);
+    strncpy(display, sValue.c_str(), size);
+    display[size - 1] = '\0';
     return true;
+}
+
+bool ClapSawDemo::paramsTextToValue(clap_id paramId, const char *display, double *value) noexcept
+{
+    switch (paramId)
+    {
+    case pmResonance:
+    case pmPreFilterVCA:
+        *value = std::clamp(std::atof(display), 0., 1.);
+        return true;
+        break;
+    case pmAmpRelease:
+    case pmAmpAttack:
+        *value = scaleSecondsToTimeParam(std::atof(display));
+        return true;
+        break;
+    case pmUnisonCount:
+    {
+        *value = std::clamp(std::atoi(display), 1, 7);
+        return true;
+        break;
+    }
+    case pmUnisonSpread:
+        *value = std::clamp(std::atof(display), 0., 100.);
+        return true;
+        break;
+
+    case pmOscDetune:
+        *value = std::clamp(std::atof(display), -200.0, 200.0);
+        return true;
+        break;
+    case pmCutoff:
+    {
+        // auto co = 440 * pow(2.0, (value - 69) / 12);
+        // log2(co/440) = (value - 69)/12
+        // value = log2(co/440) * 12 + 69
+
+        auto cohz = std::clamp(std::atof(display), 1.0, 25000.0);
+        *value = log2(cohz / 440.0) * 12 + 69;
+        return true;
+        break;
+    }
+        // Skip these two. You get the idea
+    case pmFilterMode:
+    case pmAmpIsGate:
+        return false;
+        break;
+    }
+
+    return false;
 }
 
 /*
@@ -299,7 +350,7 @@ clap_process_status ClapSawDemo::process(const clap_process *process) noexcept
 {
     // If I have no outputs, do nothing
     if (process->audio_outputs_count <= 0)
-        return CLAP_PROCESS_CONTINUE;
+        return CLAP_PROCESS_SLEEP;
 
     /*
      * Stage 1:
@@ -416,7 +467,19 @@ clap_process_status ClapSawDemo::process(const clap_process *process) noexcept
 
     // We should have gotten all the events
     assert(!nextEvent);
-    return CLAP_PROCESS_CONTINUE;
+
+    // A little optimization - if we have any active voices continue
+    for (const auto &v : voices)
+    {
+        if (v.state != SawDemoVoice::OFF)
+        {
+            return CLAP_PROCESS_CONTINUE;
+        }
+    }
+
+    // Otherwise we have no voices - we can return CLAP_PROCESS_SLEEP until we get the next event
+    // And our host can optionally skip processing
+    return CLAP_PROCESS_SLEEP;
 }
 
 /*
@@ -839,6 +902,18 @@ float ClapSawDemo::scaleTimeParamToSeconds(float param)
     return res;
 }
 
+float ClapSawDemo::scaleSecondsToTimeParam(float seconds)
+{
+    seconds = std::max(seconds, 0.000001f);
+    auto scaleTime = std::clamp(log2(seconds), -100.f, 2.f);
+
+    // scaletime = (param - 2 / 3) * 6 so
+    // param = scaleTime / 6 + 2/ 3
+
+    auto param = scaleTime / 6 * 2.0 / 3.0;
+    return param;
+}
+
 bool ClapSawDemo::stateSave(const clap_ostream *stream) noexcept
 {
     // Oh this is soooo bad. Please don't judge me. I'm just trying to get this
@@ -934,7 +1009,11 @@ bool ClapSawDemo::stateLoad(const clap_istream *stream) noexcept
 /*
  * A simple passthrough. Put it here to allow the template mechanics to see the impl.
  */
-void ClapSawDemo::editorParamsFlush() { _host.paramsRequestFlush(); }
+void ClapSawDemo::editorParamsFlush()
+{
+    if (_host.canUseParams())
+        _host.paramsRequestFlush();
+}
 
 #if IS_LINUX
 bool ClapSawDemo::registerTimer(uint32_t interv, clap_id *id)
