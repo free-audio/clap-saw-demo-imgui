@@ -1,0 +1,31 @@
+name: Pull Request Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+      - next
+
+jobs:
+  build_feature:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            name: Windows 
+          - os: macos-latest
+            name: Mac 
+          #- os: ubuntu-latest
+          #  name: Linux 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          submodules: recursive
+
+      - name: Build project
+        run: |
+          cmake -S . -B ./build -DCMAKE_BUILD_TYPE=Debug -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" 
+          cmake --build ./build --config Debug

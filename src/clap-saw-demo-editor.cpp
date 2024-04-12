@@ -8,6 +8,8 @@
 
 #include "imgui.h"
 
+#include <clap/helpers/host-proxy.hxx>
+
 #define STR_INDIR(x) #x
 #define STR(x) STR_INDIR(x)
 
