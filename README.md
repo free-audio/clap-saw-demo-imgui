@@ -1,51 +1,41 @@
-# Basic Idea
+# clap-saw-demo-imgui
 
-imgui is a 'direct more' rnederer. You get called to make your rectangles every
-so often. It has backends which do that.
+This project is a port of the [clap-saw-demo](https://github.com/surge-synthesizer/clap-saw-demo)
+VSTGUI example to have the same clap engine but use [Dear IMGUI](https://github.com/ocornut/imgui)
+as the renderer for the clap gui. Currently it works on windows and macOS.
 
-So here's my idea for clap
+The project works by using the [clap-imgui-support](https://github.com/free-audio/clap-imgui-support)
+library which provides an interface between the imgui rendering setup and the clap 
+gui interface.
 
-Look at `libs/imgui-clap-support/include/imgui-clap-support/imgui-clap-editor.h`
+That library hides most of the details, providing a DirectX12 render setup on windows and
+a Metal surface on macOS. Contributions from the linux community to make it work with
+SDL/OpenGL or another appropriate imgui backend would be welcomed!
 
-This is an abstract class which suppors a few methods (onCreate/Destry/Render). We
-would need to add resize later obviously. And holds a context.
+To use the imgui, make an editor class which subclasses `imgui_clap_editor` such as 
+[the ClapSawDemoEditor here](https://github.com/free-audio/clap-saw-demo-imgui/blob/26bd59dd78dd8bf5f743d8fbe49ba2789ce30877/src/clap-saw-demo-editor.h#L14)
+then implement the various mechanics to connect and render as shown in the cpp file. 
 
-There are a few free functions which set up the view.
 
-This means all the *nasty* GLFW and so on code behind imggui can go away from the user
+# Building the Example
 
-So the way I have this set up (since I only did mac tonigh) is `libs/imgui-clap-suport/src/apple-macos.mm`
-actually uses the *METAL* renderer to render the simple UI which is speciiced in
-`src/clap-saw-demo-editor.cpp` in `ClapSawDemoEditor::onRender`
-
-Right now it is pretty trivial - it just shows text - but making this work like
-vstgui is easy.
-
-The free fuynctions in `imggui-clap-editor.h` bind the editor object to the implementation.
-You can see in `clap-saw-demo-editor.cpp` we call them from the clap with isntances
-of the object in question
-
-So what's the upshot of this? Well it means if we finis `imggui-clap-support` (and finish
-means: add a linux gl and windows gl or dx backend implementation to match the metal one,
-move it to a submodule, add resize check for leaks and bugs, etc...) then a person writing a clap
-could simply implement the small boilerplate to connect their editor object
-up to the clap gui and voila.
-
-Will share more tomorrow -late here now - but wanted to get this up.
-
-# Building on Mac OS
-
-Requirements: Xcode, CMake
+Our CI pipeline shows the minimal build all paltforms which is
 
 ```shell
-# Checkout the code
 git clone --recurse-submodules https://github.com/free-audio/clap-saw-demo-imgui 
 cd clap-saw-demo-imgui
+cmake -Bbuild -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
+```
+
+To build, you will need visual studio installed on windows, and XCode and CMake 
+installed on macOS.
+
+As with all cmake projects you can integrate with your various IDE of choice. For instance
+to use XCode directly you would do
+
+```
 cmake -B build -G Xcode
 open build/clap-saw-demo-imgui.xcodeproj
 ```
-build in Xcode
 
-# Building on Windows
-
-TODO
